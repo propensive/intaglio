@@ -18,13 +18,14 @@
 package intaglio
 
 import guillotine._
-import mitigation._
 import annexation._
 import java.nio.file.{Files, Paths}
 import language.implicitConversions
 
+import scala.util._
+
 trait LatexBackend {
-  def process(latex: Latex, data: Seq[(String, Array[Byte])]): Result[PdfFile, ~ | ShellFailure | LatexException]
+  def process(latex: Latex, data: Seq[(String, Array[Byte])]): Try[PdfFile]
 }
 
 object TextProcess {
@@ -49,7 +50,7 @@ object unindent {
 
 object latexBackends {
   implicit val xelatex: LatexBackend = new LatexBackend {
-    def process(latex: Latex, data: Seq[(String, Array[Byte])]): Result[PdfFile, ~ | ShellFailure | LatexException] = {
+    def process(latex: Latex, data: Seq[(String, Array[Byte])]): Try[PdfFile] = {
       val dir = new java.io.File("/tmp", java.util.UUID.randomUUID().toString)
       dir.mkdir()
       data.foreach {
@@ -85,7 +86,7 @@ object latexBackends {
       }
 
       val bytes = Files.readAllBytes(Paths.get(file.getAbsolutePath.replaceAll("tex$", "pdf")))
-      Answer(PdfFile(bytes))
+      Success(PdfFile(bytes))
     }
   }
 }
@@ -107,7 +108,7 @@ case class LatexException(msg: String, line: Int, content: String) extends Excep
 
 case class Latex(content: String) {
 
-  def generate(data: (String, Array[Byte])*)(implicit backend: LatexBackend): Result[PdfFile, ~ | ShellFailure | LatexException] =
+  def generate(data: (String, Array[Byte])*)(implicit backend: LatexBackend): Try[PdfFile] =
     backend.process(this, data)
 }
 
